@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Comment CommentText="Line consists of 1-n Word">
+    <Position X="4.479" Y="1.198" Height="0.458" Width="2.075" />
+  </Comment>
+  <Class Name="Forms_Wurds.Word">
+    <Position X="6.75" Y="1.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAAAACAAAAAGAAAgAAAAAAAAAAAAAAAAAAAAQ=</HashCode>
+      <FileName>Word.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Forms_Wurds.Line">
+    <Position X="2.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAUAAAAAQAAAAAAAgEAAAAAAAAAAIAQABgAAAAAAAAQ=</HashCode>
+      <FileName>Line.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Word" />
+    </ShowAsAssociation>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
