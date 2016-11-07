@@ -21,7 +21,7 @@ namespace Forms_Wurds
         BindingSource bs = new BindingSource();
 
         //Name der zu lesenden Datei
-        static string path = Txt_Lesen("brudis");
+        static string path = Txt_Lesen("adrian");
         //Ab Wann der Name beginnt
         static int index_name_start = 19;
         //Length of DateTime
@@ -166,7 +166,10 @@ namespace Forms_Wurds
         //Gibt Dateipfad aus
         public static string Txt_Lesen(string s)
         {
-            return "C:\\Users\\Alex\\Source\\Repos\\Hunters-Dream\\txts\\" + s + ".txt";
+            if (Directory.Exists("C:\\Users\\Alex"))
+                return "C:\\Users\\Alex\\Source\\Repos\\Hunters-Dream\\txts\\" + s + ".txt";
+            else
+                return "C:\\Users\\alhe\\Source\\Repos\\Hunters-Dream\\txts\\" + s + ".txt";
         }
 
         public Form1()
@@ -411,7 +414,7 @@ namespace Forms_Wurds
             }
 
             //where to put all this data?
-
+            /*
             //percentages authors words        
             Single[] percent_words = new Single[3];
             percent_words[0] = 100 * Convert.ToSingle(authors_sum_of_words["Keni"]) / Convert.ToSingle(words_count);
@@ -430,7 +433,7 @@ namespace Forms_Wurds
             words_per_message[0] = Convert.ToSingle(authors_sum_of_words["Keni"]) / Convert.ToSingle(authors_sum_of_messages["Keni"]);
             words_per_message[1] = Convert.ToSingle(authors_sum_of_words["Marius Hild"]) / Convert.ToSingle(authors_sum_of_messages["Marius Hild"]);
             words_per_message[2] = Convert.ToSingle(authors_sum_of_words["Alex"]) / Convert.ToSingle(authors_sum_of_messages["Alex"]);
-
+            */
             //STATE OF THE GAME
 
             /*
