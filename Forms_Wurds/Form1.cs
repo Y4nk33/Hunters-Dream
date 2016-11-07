@@ -167,9 +167,9 @@ namespace Forms_Wurds
         public static string Txt_Lesen(string s)
         {
             if (Directory.Exists("C:\\Users\\Alex"))
-                return "C:\\Users\\Alex\\Source\\Repos\\Hunters-Dream\\txts\\" + s + ".txt";
+                return "C:\\Users\\Alex\\Source\\Repos\\Hunters-Dream\\Forms_Wurds\\txts\\" + s + ".txt";
             else
-                return "C:\\Users\\alhe\\Source\\Repos\\Hunters-Dream\\txts\\" + s + ".txt";
+                return "C:\\Users\\alhe\\Source\\Repos\\Hunters-Dream\\Forms_Wurds\\txts\\" + s + ".txt";
         }
 
         public Form1()
