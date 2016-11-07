@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿/*
+using System.Linq;
 using System.Collections.Generic;
 
 namespace Forms_Wurds
@@ -22,3 +23,4 @@ namespace Forms_Wurds
         }
     }
 }
+*/
