@@ -114,7 +114,6 @@
             this.listView2.Size = new System.Drawing.Size(718, 200);
             this.listView2.TabIndex = 9;
             this.listView2.UseCompatibleStateImageBehavior = false;
-            this.listView2.SelectedIndexChanged += new System.EventHandler(this.listView2_SelectedIndexChanged);
             // 
             // listView1
             // 

@@ -34,6 +34,13 @@ namespace Forms_Wurds
         //all words
         Dictionary<string, dynamic[]> words = new Dictionary<string, dynamic[]>();
 
+        //authors and their sum of words
+        Dictionary<string, int> authors_sum_of_words = new Dictionary<string, int>();
+        //authors and their sum of messages
+        Dictionary<string, int> authors_sum_of_messages = new Dictionary<string, int>();
+        //authors and their sum of words in a message
+        Dictionary<string, int> authors_words_per_message = new Dictionary<string, int>();
+
         //all lines
         Line[] lines = new Line[File.ReadAllLines(path).Count()];
 
@@ -66,14 +73,8 @@ namespace Forms_Wurds
             words_properties[1] = datetime;
             words_properties[2] = occurrence;
             words_properties[3] = author_occurrence;
-
-            //lineID.Add(line)
-            //datetime.Add(datetime)
-
-
-
         }
-
+        
         //Ermittelt die Länge des Namens des Verfassers einer Zeile
         /*
         public static int get_Name_length(string line)
@@ -156,6 +157,8 @@ namespace Forms_Wurds
                 if (authors.Contains(author) == false)
                 {
                     authors.Add(author);
+                    authors_sum_of_words.Add(author, 0);
+                    authors_sum_of_messages.Add(author, 0);
                 }
             }
         }
@@ -163,7 +166,7 @@ namespace Forms_Wurds
         //Gibt Dateipfad aus
         public static string Txt_Lesen(string s)
         {
-            return "E:\\Visual Studio Projects\\C#\\ConsoleApplication_Wurds\\txts\\" + s + ".txt";
+            return "C:\\Users\\Alex\\Source\\Repos\\Hunters-Dream\\txts\\" + s + ".txt";
         }
 
         public Form1()
@@ -179,6 +182,10 @@ namespace Forms_Wurds
 
             //trim emoji
             word = Regex.Replace(word, @"\p{Cs}", "");
+
+            //trim images, videos
+            word.Replace("<image", "");
+            word.Replace("omitted>", "");
             //trim chars
             foreach (char item in charstotrim)
             {
@@ -293,7 +300,7 @@ namespace Forms_Wurds
             //set DateTime
             lines[i].setDateTime(get_DateTime(lines_literal[i], initialdatetime));
             //set Literal
-            lines[i].setLiteral(get_message(lines_literal[i], lines[i].getAuthor().Length));        
+            lines[i].setLiteral(get_message(lines_literal[i], lines[i].getAuthor().Length));
 
             //Separate every line into words
             string[] split = trimmed_string(lines[i].getLiteral().ToLower()).Split(' ');
@@ -312,7 +319,7 @@ namespace Forms_Wurds
                     //if not, assign predefined properties
                     words.Add(split[j], new dynamic[4]);
                     //words[split[j]] = words_properties;
-                    
+
                     words[split[j]][0] = new List<int>();
                     words[split[j]][1] = new List<DateTime>();
                     words[split[j]][2] = 1;
@@ -333,9 +340,6 @@ namespace Forms_Wurds
                 words[split[j]][1].Add(lines[i].getDateTime());
                 //Dictionary authors
                 words[split[j]][3][lines[i].getAuthor()] += 1;
-
-                //count total words
-                words_count++;
             }
 
             //Outer loop to fill Lines
@@ -343,9 +347,9 @@ namespace Forms_Wurds
             {
                 lines[i] = new Line();
                 //set Author
-                lines[i].setAuthor(get_Author_byCollection(lines_literal[i], lines[i-1].getAuthor()));
+                lines[i].setAuthor(get_Author_byCollection(lines_literal[i], lines[i - 1].getAuthor()));
                 //set DateTime
-                lines[i].setDateTime(get_DateTime(lines_literal[i], lines[i-1].getDateTime()));
+                lines[i].setDateTime(get_DateTime(lines_literal[i], lines[i - 1].getDateTime()));
                 //set Literal
                 lines[i].setLiteral(get_message(lines_literal[i], lines[i].getAuthor().Length));
 
@@ -385,12 +389,47 @@ namespace Forms_Wurds
                     words[split[j]][1].Add(lines[i].getDateTime());
                     //Dictionary authors
                     words[split[j]][3][lines[i].getAuthor()] += 1;
-
-                    //count total words
-                    words_count++;
                 }
+
+                authors_sum_of_messages[lines[i].getAuthor()]++;
+
             }
 
+            //Remove [nothing]
+            words.Remove("");
+
+            //count total words
+            foreach (var item in words)
+            {
+                words_count = words_count + words[item.Key][2];
+                //count words for every author
+                foreach (var author in words[item.Key][3])
+                {
+                    authors_sum_of_words[author.Key] += words[item.Key][3][author.Key];
+                }
+
+            }
+
+            //where to put all this data?
+
+            //percentages authors words        
+            Single[] percent_words = new Single[3];
+            percent_words[0] = 100 * Convert.ToSingle(authors_sum_of_words["Keni"]) / Convert.ToSingle(words_count);
+            percent_words[1] = 100 * Convert.ToSingle(authors_sum_of_words["Marius Hild"]) / Convert.ToSingle(words_count);
+            percent_words[2] = 100 * Convert.ToSingle(authors_sum_of_words["Alex"]) / Convert.ToSingle(words_count);
+            
+            //percentages authors messages
+            Single[] percent_messages = new Single[3];
+            percent_messages[0] = 100 * Convert.ToSingle(authors_sum_of_messages["Keni"]) / Convert.ToSingle(lines.Count());
+            percent_messages[1] = 100 * Convert.ToSingle(authors_sum_of_messages["Marius Hild"]) / Convert.ToSingle(lines.Count());
+            percent_messages[2] = 100 * Convert.ToSingle(authors_sum_of_messages["Alex"]) / Convert.ToSingle(lines.Count());
+
+            //words per message by author
+            //sum words / sum messages
+            Single[] words_per_message = new Single[3];
+            words_per_message[0] = Convert.ToSingle(authors_sum_of_words["Keni"]) / Convert.ToSingle(authors_sum_of_messages["Keni"]);
+            words_per_message[1] = Convert.ToSingle(authors_sum_of_words["Marius Hild"]) / Convert.ToSingle(authors_sum_of_messages["Marius Hild"]);
+            words_per_message[2] = Convert.ToSingle(authors_sum_of_words["Alex"]) / Convert.ToSingle(authors_sum_of_messages["Alex"]);
 
             //STATE OF THE GAME
 
@@ -440,9 +479,6 @@ namespace Forms_Wurds
 
            fill_listview(lines);
            fill_listview2(words_sorted);
-            
-
-            //bs.Add
         }
 
         //fill lines into big table (full messages)
@@ -468,11 +504,11 @@ namespace Forms_Wurds
             foreach (var item in dict.Keys)
             {
                 //set key(item) and sum(dict[item]) as fixed columns
-                var item1 = new ListViewItem(new[] {item, dict[item].ToString()});
+                var item1 = new ListViewItem(new[] {item, dict[item].ToString() + " (" + (100*dict[item] / words_count).ToString() + "%)"});
                 //add count of words for every author
                 foreach (string author in authors)
                 {
-                    item1.SubItems.Add(words[item][3][author].ToString());
+                    item1.SubItems.Add(words[item][3][author].ToString());// + (dict[item] / dict[item][author].));
                 }
                 listView1.Items.Add(item1);
                 progressBar2.Increment(1);
@@ -559,54 +595,54 @@ namespace Forms_Wurds
         }
 
 
-        //When selection changes, update listview3
+        //When selection changes, update listview3, bottom one
         private void listView1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            //assign currently selected word to s
-            string s = listView1.SelectedItems[0].Text;
-
-            //assign limit via index count
-            int lim = words[s][0].Count;
-
-            List<int> list = words[s][0];
-
-            //clear all items
-            listView3.Items.Clear();
-            //use LineID array
-            for (int j = 0; j<=lim; j++)
+            if (listView1.SelectedItems.Count > 0)
             {
-                //get lineID of current object
-                int i = list[j];
-                //use lineID to get message
-                listView3.Items.Add(get_Message(i));
+                //assign currently selected word to s
+                string s;
+                s = listView1.SelectedItems[0].Text;
+
+
+                //assign limit via index count
+                int lim = words[s][0].Count;
+
+                //list of LineIDs
+                List<int> list = words[s][0];
+
+                //clear all items
+                listView3.Items.Clear();
+
+                //fill listview3 by using lineIDs
+                foreach (var item in list)
+                {
+                    listView3.Items.Add(get_Message(item));
+                }
             }
-            
         }
         
-
-        //fuck
-        private void listView2_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            ;
-        }
-
         //When clicking an item, jump to the part in the big list
         private void listView3_SelectedIndexChanged(object sender, EventArgs e)
         {
-            //assign selection to s
-            string s = listView3.SelectedItems[0].SubItems[2].Text;
-            int i = 0;
-
-            foreach (var item in lines)
+            if (listView3.SelectedItems.Count > 0)
             {
-                if (item.getLiteral() == s)
+                //assign selection to s
+                string s = listView3.SelectedItems[0].SubItems[2].Text;
+                int i = 0;
+
+                foreach (var item in lines)
                 {
-                    break;
+                    if (item.getLiteral() == s)
+                    {
+                        break;
+                    }
+                    i++;
                 }
-                i++;
+                //jump to selected message
+                listView2.Items[i].EnsureVisible();
+                listView2.Items[i].Selected = true;
             }
-            //jump to selected message
-            listView2.Items[i].EnsureVisible();
         }
     }
 }
