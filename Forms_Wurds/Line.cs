@@ -14,19 +14,19 @@ namespace Forms_Wurds
             set;
         }
 
-        private DateTime DateTime
+        public DateTime DateTime
         {
             get;
             set;
         }
 
-        private string Author
+        public string Author
         {
             get;
             set;
         }
 
-        private string Literal
+        public string Literal
         {
             get;
             set;

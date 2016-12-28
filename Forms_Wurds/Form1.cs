@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Text.RegularExpressions;
 using System.Reflection;
+using Microsoft.SqlServer;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace Forms_Wurds
 {
@@ -188,6 +190,8 @@ namespace Forms_Wurds
 
             //trim images, videos
             word.Replace("<image", "");
+            word.Replace("<video", "");
+            word.Replace("<audio", "");
             word.Replace("omitted>", "");
             //trim chars
             foreach (char item in charstotrim)
@@ -196,12 +200,6 @@ namespace Forms_Wurds
             }
 
             return word;
-        }
-
-        //Fills the CheckedListBox with authors collection
-        public void Fill_namelist()
-        {
-            checkedListBox1.Items.AddRange(authors.ToArray());
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -286,10 +284,7 @@ namespace Forms_Wurds
         //Button Analysis
         private void button1_Click(object sender, EventArgs e)
         {
-
             initialization();
-
-
 
             int i = 0;
 
@@ -398,10 +393,70 @@ namespace Forms_Wurds
 
             }
 
-            //Remove [nothing]
-            words.Remove("");
+            button1.Hide();
 
+            //fill_namelist();
+
+            //*******************************************************************
+            //                                                                  *
+            //                                                                  *
+            //                 Done with major Loops! Now What?                 *
+            //                                                                  *
+            //                                                                  *
+            //*******************************************************************
+
+
+            //HOW THE FUCK DO I SORTABLEBINDINGLIST!?
+
+
+            //lets try to fill a DataGrid
+
+            //
+            //Fill DataGridView DG_whole_chat with the whole chat, duh. Easy as that
+
+            BindingList<Line[]> sortablelines = new BindingList<Line[]>();
+            //sortablelines.AddNew();
+            sortablelines.Add(lines);
+
+            //sortablelines.OrderByDescending(x => x[0].Literal).ToList();
+
+            //DG_whole_chat.DataSource = sortablelines[0];
+
+            DG_whole_chat.DataSource = sortablelines[0].OrderByDescending(x => x.DateTime).ToList();
+
+            //Style of Column 0, DateTime
+            DG_whole_chat.Columns[0].Width = 125;
+            DG_whole_chat.Columns[0].SortMode = DataGridViewColumnSortMode.Automatic;
+            //Style of Column 1, Author
+            DG_whole_chat.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
+            DG_whole_chat.Columns[1].SortMode = DataGridViewColumnSortMode.Automatic;
+
+            //Style of Column 2, Message
+            DG_whole_chat.Columns[2].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            DG_whole_chat.Columns[2].Name = "Message";
+            DG_whole_chat.Columns[2].ReadOnly = false;
+            DG_whole_chat.Columns[2].SortMode = DataGridViewColumnSortMode.Automatic;
+            //.SortMode = DataGridViewColumnSortMode.Automatic;
+
+
+            //DG_whole_chat.Bin
+
+            //DG_whole_chat.DataBindingComplete += Sort;
+
+
+
+            // DG_whole_chat.Sort(DG_whole_chat.Columns[0], ListSortDirection.Descending);
+
+
+
+            progressBar1.Hide();
+            //
+            //Remove [nothing]
+            //
+            words.Remove("");
+            //
             //count total words
+            //
             foreach (var item in words)
             {
                 words_count = words_count + words[item.Key][2];
@@ -410,8 +465,11 @@ namespace Forms_Wurds
                 {
                     authors_sum_of_words[author.Key] += words[item.Key][3][author.Key];
                 }
-
             }
+
+
+
+
 
             //where to put all this data?
             /*
@@ -434,112 +492,122 @@ namespace Forms_Wurds
             words_per_message[1] = Convert.ToSingle(authors_sum_of_words["Marius Hild"]) / Convert.ToSingle(authors_sum_of_messages["Marius Hild"]);
             words_per_message[2] = Convert.ToSingle(authors_sum_of_words["Alex"]) / Convert.ToSingle(authors_sum_of_messages["Alex"]);
             */
-            //STATE OF THE GAME
-
-            /*
-
-            -TIDY UP YOUR CODE
-
-            */
 
             //Create temporary dictionary to sort afterwards
             Dictionary<string, int> words_temp = new Dictionary<string, int>();
             //Create sorted dictionary
             Dictionary<string, int> words_sorted = new Dictionary<string, int>();
-
+            /*
             //fill temporary dict
             foreach (var element in words)
             {
                 words_temp.Add(element.Key, words[element.Key][2]);
             }
-
+            */
+            /*
             //and sort into words_sorted dictionary
             foreach (KeyValuePair<string, int> item in words_temp.OrderByDescending(key => key.Value))
             {
                 words_sorted.Add(item.Key, item.Value);
             }
+            */
 
-            listView3.View = View.Details;
-            listView2.View = View.Details;
-            listView1.View = View.Details;
+            //
+            //Fill DataGridView DG_words with words + sum
+            //
 
-            listView2.Columns.Add("DateTime", 120, HorizontalAlignment.Left);
-            listView2.Columns.Add("Author", 100, HorizontalAlignment.Left);
-            listView2.Columns.Add("Message", 800, HorizontalAlignment.Left);
+            // DG_words.Column
 
-            listView3.Columns.Add("DateTime", 120, HorizontalAlignment.Left);
-            listView3.Columns.Add("Author", 100, HorizontalAlignment.Left);
-            listView3.Columns.Add("Message", 800, HorizontalAlignment.Left);
 
-            listView1.Columns.Add("Word", 100, HorizontalAlignment.Left);
-            listView1.Columns.Add("Sum", 80, HorizontalAlignment.Left);
+            add_author_columns_to_DG_words(authors);
+            fill_author_columns_of_DG_words(words);
 
-            //Create a column for every author
-            foreach (string author in authors)
-            {
-                listView1.Columns.Add(author, 80, HorizontalAlignment.Left);
-            }
+            DG_words.Sort(DG_words.Columns[1], ListSortDirection.Descending);
 
-           fill_listview(lines);
-           fill_listview2(words_sorted);
+
+            Dictionary<string, int> pie_data = new Dictionary<string, int>();
+            pie_data.Add(DG_words.Rows[0].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[0].Cells[1].Value));
+            pie_data.Add(DG_words.Rows[1].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[1].Cells[1].Value));
+            pie_data.Add(DG_words.Rows[2].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[2].Cells[1].Value));
+            pie_data.Add(DG_words.Rows[3].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[3].Cells[1].Value));
+            pie_data.Add(DG_words.Rows[4].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[4].Cells[1].Value));
+
+            Chart_Words.DataSource = pie_data;
+            Chart_Words.Visible = true;
+            //Chart_Words.Series.Add()
         }
 
-        //fill lines into big table (full messages)
-        public void fill_listview(Line[] lines)
-        {
-            progressBar1.Minimum = 0;
-            progressBar1.Maximum = lines.Count();
 
-            for (int i = 0; i < lines.Count(); i++)
+
+        public int get_author_count(Collection<string> authors)
+        {
+            int i = 0;
+            foreach (var author in authors)
             {
-                var item1 = new ListViewItem(new[] { lines[i].getDateTime().ToString(), lines[i].getAuthor(), lines[i].getLiteral() });
-                bs.Add(item1);
-                listView2.Items.Add(item1);
-                progressBar1.Increment(1);
+                i++;
             }
-            //listView2.DataSource = bs;
+            return i;
         }
 
-        //fill words into table
-        
-        public void fill_listview2(Dictionary<string, int> dict)
+        public void fill_author_columns_of_DG_words(Dictionary<string, dynamic[]> words)
         {
-            foreach (var item in dict.Keys)
+            //create a row to populate DG_word
+            DataGridViewRow row = new DataGridViewRow();
+
+            //for every word in words
+            foreach (var word in words.Keys)
             {
-                //set key(item) and sum(dict[item]) as fixed columns
-                var item1 = new ListViewItem(new[] {item, dict[item].ToString() + " (" + (100*dict[item] / words_count).ToString() + "%)"});
-                //add count of words for every author
-                foreach (string author in authors)
+                row = DG_words.Rows[DG_words.Rows.Add()];
+
+                //name column1 to assign a value
+                DG_words.Columns[0].Name = "Word";
+                row.Cells["Word"].Value = word;
+                //name column2 to assign a value
+                DG_words.Columns[1].Name = "Sum";
+                row.Cells["Sum"].Value = words[word][2];
+
+                int i = 2;
+
+                progressBar2.Minimum = 0;
+                progressBar2.Maximum = words.Count();
+
+                //for every author in a word
+                foreach (var author_dict in words[word][3])
                 {
-                    item1.SubItems.Add(words[item][3][author].ToString());// + (dict[item] / dict[item][author].));
+                    //name column x to assign a value
+                    DG_words.Columns[i].Name = author_dict.Key;
+                    row.Cells[author_dict.Key].Value = words[word][3][author_dict.Key];
+                    i++;
                 }
-                listView1.Items.Add(item1);
+
                 progressBar2.Increment(1);
+
             }
-
+            progressBar2.Hide();
         }
-        
 
-        public void fill_listview1(Dictionary<string, int> words)
+        //get all authors and populate DG_words with all authors, in order to fill it with values
+        public void add_author_columns_to_DG_words(Collection<string> authors)
         {
-            progressBar2.Minimum = 0;
-            progressBar2.Maximum = words.Count();
-
-            foreach (var item in words.Keys)
+            foreach (var author in authors)
             {
-                var item1 = new ListViewItem(new[] {words[item].ToString(), item});
-                listView1.Items.Add(item1);
-                progressBar2.Increment(1);
+                DataGridViewColumn temporary_author_col = new DataGridViewColumn();
+                DataGridViewCell temporary_cell = new DataGridViewTextBoxCell();
+                
+                temporary_author_col.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+                temporary_author_col.HeaderText = author;
+                temporary_author_col.Name = "DG_words_col_" + author;
+                temporary_author_col.ReadOnly = false;
+                temporary_author_col.SortMode = DataGridViewColumnSortMode.Automatic;
+                temporary_author_col.Width = 50;
+                temporary_author_col.CellTemplate = temporary_cell;
+
+                if(author == "System")
+                temporary_author_col.Visible = false;
+
+                DG_words.Columns.Add(temporary_author_col);
             }
-
         }
-
-        //Fill namelist
-        private void button2_Click(object sender, EventArgs e)
-        {
-            Fill_namelist();
-        }
-
 
         /*
         //Fill ListBox with authors
@@ -583,6 +651,7 @@ namespace Forms_Wurds
         }
         */
         //Check all authors
+        /*
         private void button3_Click_1(object sender, EventArgs e)
         {
             for (int i = 0; i < checkedListBox1.Items.Count; i++)
@@ -590,7 +659,7 @@ namespace Forms_Wurds
                 checkedListBox1.SetItemChecked(i, true);
             }
         }
-
+        */
         //Uses LineID to output a message
         public ListViewItem get_Message(int i)
         {
@@ -598,7 +667,7 @@ namespace Forms_Wurds
         }
 
 
-        //When selection changes, update listview3, bottom one
+        /*When selection changes, update listview3, bottom one
         private void listView1_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (listView1.SelectedItems.Count > 0)
@@ -624,8 +693,9 @@ namespace Forms_Wurds
                 }
             }
         }
+        */
         
-        //When clicking an item, jump to the part in the big list
+        /*When clicking an item, jump to the part in the big list
         private void listView3_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (listView3.SelectedItems.Count > 0)
@@ -643,9 +713,90 @@ namespace Forms_Wurds
                     i++;
                 }
                 //jump to selected message
-                listView2.Items[i].EnsureVisible();
-                listView2.Items[i].Selected = true;
+                //listView2.Items[i].EnsureVisible();
+                //listView2.Items[i].Selected = true;
+
+                //DG_whole_chat.ScrollIntoView
             }
+        }
+        */
+
+        private void DG_whole_chat_SelectionChanged(object sender, EventArgs e)
+        {
+            this.DG_whole_chat.ClearSelection();
+        }
+
+        private void split_DG_whole_chat_DG_words_MouseDown(object sender, MouseEventArgs e)
+        {
+            // This disables the normal move behavior
+            ((SplitContainer)sender).IsSplitterFixed = true;
+        }
+
+        private void split_DG_whole_chat_DG_words_MouseUp(object sender, MouseEventArgs e)
+        {
+            // This allows the splitter to be moved normally again
+            ((SplitContainer)sender).IsSplitterFixed = false;
+        }
+
+        private void split_DG_whole_chat_DG_words_MouseMove(object sender, MouseEventArgs e)
+        {
+            // Check to make sure the splitter won't be updated by the
+            // normal move behavior also
+            if (((SplitContainer)sender).IsSplitterFixed)
+            {
+                // Make sure that the button used to move the splitter
+                // is the left mouse button
+                if (e.Button.Equals(MouseButtons.Left))
+                {
+                    // Checks to see if the splitter is aligned Vertically
+                    if (((SplitContainer)sender).Orientation.Equals(Orientation.Vertical))
+                    {
+                        // Only move the splitter if the mouse is within
+                        // the appropriate bounds
+                        if (e.X > 0 && e.X < ((SplitContainer)sender).Width)
+                        {
+                            // Move the splitter & force a visual refresh
+                            ((SplitContainer)sender).SplitterDistance = e.X;
+                            ((SplitContainer)sender).Refresh();
+                        }
+                    }
+                    // If it isn't aligned vertically then it must be
+                    // horizontal
+                    else
+                    {
+                        // Only move the splitter if the mouse is within
+                        // the appropriate bounds
+                        if (e.Y > 0 && e.Y < ((SplitContainer)sender).Height)
+                        {
+                            // Move the splitter & force a visual refresh
+                            ((SplitContainer)sender).SplitterDistance = e.Y;
+                            ((SplitContainer)sender).Refresh();
+                        }
+                    }
+                }
+                // If a button other than left is pressed or no button
+                // at all
+                else
+                {
+                    // This allows the splitter to be moved normally again
+                    ((SplitContainer)sender).IsSplitterFixed = false;
+                }
+            }
+        }
+
+        //This function reads the selected line to get LineID of the selected word
+        //LineID will be used to filter a DataGridView showing all Messages containing
+        //this word or LineID
+        private void DG_words_SelectionChanged(object sender, EventArgs e)
+        {
+            //selected word
+            string word = "";
+            try
+            {
+                word = DG_words.SelectedRows[0].Cells[0].Value.ToString();
+            }
+            catch { }
+            //DG_whole_chat_filteredByWord.Sort
         }
     }
 }
