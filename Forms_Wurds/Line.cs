@@ -8,11 +8,9 @@ namespace Forms_Wurds
 {
     public class Line
     {
-        internal Forms_Wurds.Word[] Word
-        {
-            get;
-            set;
-        }
+        //
+        //  ATTRIBUTES
+        //
 
         public DateTime DateTime
         {
@@ -32,14 +30,15 @@ namespace Forms_Wurds
             set;
         }
 
+        //
+        //  FUNCTIONS
+        //
+
+        //  GETS
+
         public String getAuthor()
         {
             return Author;
-        }
-
-        public void setAuthor(string author)
-        {
-            Author = author;
         }
 
         public DateTime getDateTime()
@@ -47,14 +46,21 @@ namespace Forms_Wurds
             return DateTime;
         }
 
-        public void setDateTime(DateTime datetime)
-        {
-            DateTime = datetime;
-        }
-
         public String getLiteral()
         {
             return Literal;
+        }
+
+        //  SETS
+
+        public void setAuthor(string author)
+        {
+            Author = author;
+        }
+
+        public void setDateTime(DateTime datetime)
+        {
+            DateTime = datetime;
         }
 
         public void setLiteral(string literal)

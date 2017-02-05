@@ -13,28 +13,32 @@ using System.Text.RegularExpressions;
 using System.Reflection;
 using Microsoft.SqlServer;
 using System.Windows.Forms.DataVisualization.Charting;
+using System.Threading;
 
 namespace Forms_Wurds
 {
     public partial class Form1 : Form
     {
         //Global Variables
-        BindingSource bs = new BindingSource();
 
+        //DateTime Format
+        static string DateTime_Format = "dd/MM/yyyy, HH:mm:ss";
+        //Used in DG_whole_chat
+        SortableBindingList<Line[]> sortablelines = new SortableBindingList<Line[]>();
         //Name der zu lesenden Datei
-        static string path = Txt_Lesen("brudis");
+        static string path = Txt_Lesen("_chat");
         //Ab Wann der Name beginnt
-        static int index_name_start = 19;
+        static int index_name_start = 22;
         //Length of DateTime
-        static int datetime_length = 17;
+        static int datetime_length = 20;
         //all lines
         static string[] lines_literal = File.ReadAllLines(path);
         //sum of all words
-        static int words_count = 0;
+        //static int words_count = 0;
 
-        //all words
-        Dictionary<string, dynamic[]> words = new Dictionary<string, dynamic[]>();
-
+        //NEW, all words
+        static Dictionary<string, Word> Wurds = new Dictionary<string, Word>();
+        
         //authors and their sum of words
         Dictionary<string, int> authors_sum_of_words = new Dictionary<string, int>();
         //authors and their sum of messages
@@ -49,33 +53,12 @@ namespace Forms_Wurds
         static Collection<string> authors = new Collection<string>();
 
         //this array of objects holds every property of words
-        static dynamic[] words_properties = new dynamic[4];
 
-        //words_properties
-        public static void initialization()
+        public Form1()
         {
-            //declaration of objects:
-
-            //LineID to carry over the corresponding Line
-            List<int>               lineID              = new List<int>();
-            //DateTime of occurrence
-            List<DateTime>          datetime            = new List<DateTime>();
-            //Amount of occurrence
-            int                     occurrence          = 1;
-            //Occurrence by author
-            Dictionary<string, int> author_occurrence   = new Dictionary<string, int>();
-            //fill this dictionary
-            foreach (var author in authors)
-            {
-                author_occurrence.Add(author, 0);
-            }
-            //assign properties
-            words_properties[0] = lineID;
-            words_properties[1] = datetime;
-            words_properties[2] = occurrence;
-            words_properties[3] = author_occurrence;
+            InitializeComponent();
         }
-        
+  
         //Ermittelt die Länge des Namens des Verfassers einer Zeile
         /*
         public static int get_Name_length(string line)
@@ -115,7 +98,7 @@ namespace Forms_Wurds
         //Checks wether a line belongs to the previous line
         public static bool Line_is_newLine(String line)
         {
-            if (line.Length >= 9 && line[2] == '/' && line[5] == '/' && line[8] == ' ')
+            if (line.Length >= 12 && line[2] == '/' && line[5] == '/' && line[10] == ',')
                 return false;
             else
                 return true;
@@ -142,7 +125,7 @@ namespace Forms_Wurds
         public static DateTime get_DateTime(string line, DateTime previous_datetime)
         {
             if (get_message_type(line) != 1)
-                return DateTime.ParseExact(line.Substring(0, datetime_length), "dd/MM/yy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+                return DateTime.ParseExact(line.Substring(0, datetime_length), DateTime_Format, System.Globalization.CultureInfo.InvariantCulture);
             else
                 return previous_datetime;
         }
@@ -153,13 +136,11 @@ namespace Forms_Wurds
             string author = "";
             for (int i = 0; i < lines_literal.Count(); i++)
             {
-                author = get_Author(lines_literal[i], author);
+                author = get_Author(lines_literal[i], "");
 
-                if (authors.Contains(author) == false)
+                if (authors.Contains(author) == false && author != "")
                 {
                     authors.Add(author);
-                    authors_sum_of_words.Add(author, 0);
-                    authors_sum_of_messages.Add(author, 0);
                 }
             }
         }
@@ -173,25 +154,25 @@ namespace Forms_Wurds
                 return "C:\\Users\\alhe\\Source\\Repos\\Hunters-Dream\\Forms_Wurds\\txts\\" + s + ".txt";
         }
 
-        public Form1()
-        {
-            InitializeComponent();
-        }
-
         //Word trimmed of Blacklisted characters
         public static string trimmed_string(string word)
         {
             //chars to trim
-            char[] charstotrim = { '!', '?', '"', '.', '[', ']', ','};
+            char[] charstotrim = { '\\', '/', '!', '?', '"', '.', '[', ']', ',', '(', ')', ':', '-', '*'};
+
+            //is word a number?
+            if (Regex.IsMatch(word, @"^\d+$"))
+                return "";
 
             //trim emoji
             word = Regex.Replace(word, @"\p{Cs}", "");
-
+            
             //trim images, videos
-            word.Replace("<image", "");
-            word.Replace("<video", "");
-            word.Replace("<audio", "");
-            word.Replace("omitted>", "");
+            word = word.Replace("<image", "");
+            word = word.Replace("<video", "");
+            word = word.Replace("<audio", "");
+            word = word.Replace("omitted>", "");
+
             //trim chars
             foreach (char item in charstotrim)
             {
@@ -201,19 +182,13 @@ namespace Forms_Wurds
             return word;
         }
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            //initiliaze
-            set_allAuthors();
-        }
-
         //Gets rid of the DateTime
         public static String TrimDateTime(String line)
         {
             return line.Substring(index_name_start);
         }
 
-        //Checks the prebuilt authors collection to get the author //I thinks it's faster this way than using get_Author()
+        //Checks the prebuilt authors collection to get the author //I think it's faster this way than using get_Author()
         public static string get_Author_byCollection(string line, string previous_author)
         {
             switch (get_message_type(line))
@@ -273,155 +248,90 @@ namespace Forms_Wurds
             }
         }
 
-        public static void Analysis()
+        public void Dissect_Chat()
         {
-
-            ;
-
-        }
-
-        //Button Analysis
-        private void button1_Click(object sender, EventArgs e)
-        {
-            initialization();
-
-            int i = 0;
-
-            //fill initial line into array
-            string initialauthor = "System";
-            DateTime initialdatetime = DateTime.ParseExact("01/01/01", "dd/mm/yy", System.Globalization.CultureInfo.InvariantCulture);
-
-            lines[i] = new Line();
-            //set Author
-            lines[i].setAuthor(get_Author_byCollection(lines_literal[i], initialauthor));
-            //set DateTime
-            lines[i].setDateTime(get_DateTime(lines_literal[i], initialdatetime));
-            //set Literal
-            lines[i].setLiteral(get_message(lines_literal[i], lines[i].getAuthor().Length));
-
-            //Separate every line into words
-            string[] split = trimmed_string(lines[i].getLiteral().ToLower()).Split(' ');
-
-            //for every word in the first line do the following
-            for (int j = 0; j < split.Count(); j++)
-            {
-                //Check if word is already contained
-                if (words.ContainsKey(split[j]))
-                {
-                    //if yes, count occurrence up by 1
-                    words[split[j]][2] += 1;
-                }
-                else
-                {
-                    //if not, assign predefined properties
-                    words.Add(split[j], new dynamic[4]);
-                    //words[split[j]] = words_properties;
-
-                    words[split[j]][0] = new List<int>();
-                    words[split[j]][1] = new List<DateTime>();
-                    words[split[j]][2] = 1;
-                    words[split[j]][3] = new Dictionary<string, int>();
-
-                    //fill authors
-                    foreach (var author in authors)
-                    {
-                        words[split[j]][3].Add(author, 0);
-                    }
-
-                }
-
-                //Those are always added
-                //LineID
-                words[split[j]][0].Add(i);
-                //DateTime
-                words[split[j]][1].Add(lines[i].getDateTime());
-                //Dictionary authors
-                words[split[j]][3][lines[i].getAuthor()] += 1;
-            }
-
-            //Outer loop to fill Lines
-            for (i = 1; i < lines.Count(); i++)
+            //  1 Loop = 1 Line 
+            for (int i = 0; i < lines.Count(); i++)
             {
                 lines[i] = new Line();
-                //set Author
-                lines[i].setAuthor(get_Author_byCollection(lines_literal[i], lines[i - 1].getAuthor()));
-                //set DateTime
-                lines[i].setDateTime(get_DateTime(lines_literal[i], lines[i - 1].getDateTime()));
-                //set Literal
-                lines[i].setLiteral(get_message(lines_literal[i], lines[i].getAuthor().Length));
+                string current_author = "System";
 
-                //Separate every line into words
-                split = trimmed_string(lines[i].getLiteral().ToLower()).Split(' ');
-
-                //Inner loop to fill Wurds (that kill, would you speak them to me?)
-                for (int j = 0; j < split.Count(); j++)
+                //If first Line
+                if (i == 0)
                 {
-                    //Check if word is already contained
-                    if (words.ContainsKey(split[j]))
-                    {
-                        //if yes, count occurrence up by 1
-                        words[split[j]][2] += 1;
-                    }
-                    else
-                    {
-                        //if not, assign predefined properties
-                        words.Add(split[j], new dynamic[4]);
-                        words[split[j]][0] = new List<int>();
-                        words[split[j]][1] = new List<DateTime>();
-                        words[split[j]][2] = 1;
-                        words[split[j]][3] = new Dictionary<string, int>();
+                    //fill initial line into array
+                    string initialauthor = "System";
+                    DateTime initialdatetime = DateTime.ParseExact("01/01/01", "dd/mm/yy", System.Globalization.CultureInfo.InvariantCulture);
 
-                        //fill authors
-                        foreach (var author in authors)
-                        {
-                            words[split[j]][3].Add(author, 0);
-                        }
-
-                    }
-
-                    //Those are always added
-                    //LineID
-                    words[split[j]][0].Add(i);
-                    //DateTime
-                    words[split[j]][1].Add(lines[i].getDateTime());
-                    //Dictionary authors
-                    words[split[j]][3][lines[i].getAuthor()] += 1;
+                    //set Author
+                    current_author = get_Author_byCollection(lines_literal[i], initialauthor);
+                    lines[i].setAuthor(current_author);
+                    //set DateTime
+                    lines[i].setDateTime(get_DateTime(lines_literal[i], initialdatetime));
+                }
+                //not first line...
+                else
+                {
+                    //set Author
+                    current_author = get_Author_byCollection(lines_literal[i], lines[i - 1].getAuthor());
+                    lines[i].setAuthor(current_author);
+                    //set DateTime
+                    lines[i].setDateTime(get_DateTime(lines_literal[i], lines[i - 1].getDateTime()));
                 }
 
-                authors_sum_of_messages[lines[i].getAuthor()]++;
+                //set Literal
+                lines[i].setLiteral(get_message(lines_literal[i], lines[i].getAuthor().Length));
+                //Separate every line into array of words
+                string[] split = trimmed_string(lines[i].getLiteral().ToLower()).Split(' ');
 
+
+
+                //
+                //
+                //  Inner loop to fill Wurds (that kill, would you speak them to me?)
+                //  "for every word, do this..."
+                //  1 Loop = 1 Word
+                //
+                for (int j = 0; j < split.Count(); j++)
+                {
+                    //Current treated word
+                    string current_word = split[j];
+
+                    //Check if word is NOT already contained
+                    if (!Wurds.Keys.Contains(current_word))
+                    {
+                        //Add it then
+                        Wurds.Add(current_word, new Word(authors));
+                    }
+                    //in any case, do the following
+                    //
+                    //add lineKEY
+                    Wurds[current_word].add_lineKEY(i);
+                    //
+                    //add author occurrence
+                    Wurds[current_word].add_author_occurrence(current_author);
+                }
+            }
+            Wurds.Remove("");
+        }
+
+        public static Dictionary<string, int> Fill_Author_Dictionary(Collection<string> Authors)
+        {
+            Dictionary<string, int> Total_Occurrence_per_Author = new Dictionary<string, int>();
+
+            foreach (string Author in Authors)
+            {
+                Total_Occurrence_per_Author.Add(Author, 0);
             }
 
-            button1.Hide();
+            return Total_Occurrence_per_Author;
+        }
 
-            //fill_namelist();
-
-            //*******************************************************************
-            //                                                                  *
-            //                                                                  *
-            //                 Done with major Loops! Now What?                 *
-            //                                                                  *
-            //                                                                  *
-            //*******************************************************************
-
-
-            //HOW THE FUCK DO I SORTABLEBINDINGLIST!?
-
-
-            //lets try to fill a DataGrid
-
-            //
-            //Fill DataGridView DG_whole_chat with the whole chat, duh. Easy as that
-
-            BindingList<Line[]> sortablelines = new BindingList<Line[]>();
-            //sortablelines.AddNew();
+        public void Fill_DG_whole_chat()
+        {
+            //Content of Whole Chat
             sortablelines.Add(lines);
-
-            //sortablelines.OrderByDescending(x => x[0].Literal).ToList();
-
-            //DG_whole_chat.DataSource = sortablelines[0];
-
-            DG_whole_chat.DataSource = sortablelines[0].OrderByDescending(x => x.DateTime).ToList();
+            DG_whole_chat.DataSource = sortablelines[0].OrderBy(x => x.getDateTime()).ToList();
 
             //Style of Column 0, DateTime
             DG_whole_chat.Columns[0].Width = 125;
@@ -435,7 +345,44 @@ namespace Forms_Wurds
             DG_whole_chat.Columns[2].Name = "Message";
             DG_whole_chat.Columns[2].ReadOnly = false;
             DG_whole_chat.Columns[2].SortMode = DataGridViewColumnSortMode.Automatic;
-            //.SortMode = DataGridViewColumnSortMode.Automatic;
+
+        }
+
+        private void Analysis(Dictionary<string, Word> words)
+        {
+            Dictionary<string, int> Total_Occurrence_per_Author = new Dictionary<string, int>(Fill_Author_Dictionary(authors));
+
+            //Count of every unique used word
+            int Total_unique_Word_Count = 0;
+            //Count of total words
+            int Total_Word_Count = 0;
+
+            //Loops through words to fill various variables
+            foreach (string word in words.Keys)
+            {
+                Total_unique_Word_Count++;
+                foreach (string author in words[word].get_author_occurrence().Keys)
+                {
+                    Total_Occurrence_per_Author[author] += words[word].get_author_occurrence()[author];
+                    Total_Word_Count += words[word].get_author_occurrence()[author];
+                }
+            }
+
+            Total_Word_Count -= Total_Occurrence_per_Author["System"];
+            Total_Occurrence_per_Author.Remove("System");
+            Total_Occurrence_per_Author.Remove("");
+
+            fill_Chart_Words(Total_Occurrence_per_Author, Total_Word_Count);
+
+
+
+
+
+
+
+
+
+
 
 
             //DG_whole_chat.Bin
@@ -445,17 +392,14 @@ namespace Forms_Wurds
 
 
             // DG_whole_chat.Sort(DG_whole_chat.Columns[0], ListSortDirection.Descending);
-
-
-
-            progressBar1.Hide();
             //
             //Remove [nothing]
             //
-            words.Remove("");
+
             //
             //count total words
             //
+            /*
             foreach (var item in words)
             {
                 words_count = words_count + words[item.Key][2];
@@ -465,8 +409,7 @@ namespace Forms_Wurds
                     authors_sum_of_words[author.Key] += words[item.Key][3][author.Key];
                 }
             }
-
-
+            */
 
 
 
@@ -492,10 +435,6 @@ namespace Forms_Wurds
             words_per_message[2] = Convert.ToSingle(authors_sum_of_words["Alex"]) / Convert.ToSingle(authors_sum_of_messages["Alex"]);
             */
 
-            //Create temporary dictionary to sort afterwards
-            Dictionary<string, int> words_temp = new Dictionary<string, int>();
-            //Create sorted dictionary
-            Dictionary<string, int> words_sorted = new Dictionary<string, int>();
             /*
             //fill temporary dict
             foreach (var element in words)
@@ -518,25 +457,16 @@ namespace Forms_Wurds
             // DG_words.Column
 
 
-            add_author_columns_to_DG_words(authors);
-            fill_author_columns_of_DG_words(words);
-
-            DG_words.Sort(DG_words.Columns[1], ListSortDirection.Descending);
-
-
-            Dictionary<string, int> pie_data = new Dictionary<string, int>();
-            pie_data.Add(DG_words.Rows[0].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[0].Cells[1].Value));
-            pie_data.Add(DG_words.Rows[1].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[1].Cells[1].Value));
-            pie_data.Add(DG_words.Rows[2].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[2].Cells[1].Value));
-            pie_data.Add(DG_words.Rows[3].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[3].Cells[1].Value));
-            pie_data.Add(DG_words.Rows[4].Cells[0].Value.ToString(), Convert.ToInt32(DG_words.Rows[4].Cells[1].Value));
-
-            Chart_Words.DataSource = pie_data;
             Chart_Words.Visible = true;
             //Chart_Words.Series.Add()
+
+            //Task task = new Task(fill_author_columns_of_DG_words);
+
+
+            //fill_author_columns_of_DG_words(Wurds);
+
+
         }
-
-
 
         public int get_author_count(Collection<string> authors)
         {
@@ -548,41 +478,57 @@ namespace Forms_Wurds
             return i;
         }
 
-        public void fill_author_columns_of_DG_words(Dictionary<string, dynamic[]> words)
-        {
-            //create a row to populate DG_word
+       void fill_author_columns_of_DG_words(Dictionary<string, Word> words)
+       {
+            add_author_columns_to_DG_words(authors);
+
             DataGridViewRow row = new DataGridViewRow();
 
-            //for every word in words
+            int i = 2;
+
+            //name column1 to assign a value
+            DG_words.Columns[0].Name = "Word";
+            //name column2 to assign a value
+            DG_words.Columns[1].Name = "Sum";
+
+            //counter to sort midway through
+            int counter = 1;
+
+            //for every word in words //for loop represents one row-fill
             foreach (var word in words.Keys)
             {
-                row = DG_words.Rows[DG_words.Rows.Add()];
+                DG_words.Invoke(new MethodInvoker(delegate{
+                    row = DG_words.Rows[DG_words.Rows.Add()];
+                }));
 
-                //name column1 to assign a value
-                DG_words.Columns[0].Name = "Word";
-                row.Cells["Word"].Value = word;
-                //name column2 to assign a value
-                DG_words.Columns[1].Name = "Sum";
-                row.Cells["Sum"].Value = words[word][2];
+                DG_words.Invoke(new MethodInvoker(delegate {
+                    row.Cells["Word"].Value = word;
+                }));
+                row.Cells["Sum"].Value = words[word].get_totaloccurrences();
 
-                int i = 2;
-
-                progressBar2.Minimum = 0;
-                progressBar2.Maximum = words.Count();
-
+                i = 2;
                 //for every author in a word
-                foreach (var author_dict in words[word][3])
+                foreach (var author_dict in words[word].get_author_occurrence())
                 {
                     //name column x to assign a value
-                    DG_words.Columns[i].Name = author_dict.Key;
-                    row.Cells[author_dict.Key].Value = words[word][3][author_dict.Key];
+                    DG_words.Invoke(new MethodInvoker(delegate {
+                        DG_words.Columns[i].Name = author_dict.Key;
+                    }));
+                    row.Cells[author_dict.Key].Value = words[word].get_author_occurrence()[author_dict.Key];
                     i++;
                 }
 
-                progressBar2.Increment(1);
-
+                counter++; 
+                //temporarily sort
+                if(counter == 50)
+                DG_words.Invoke(new MethodInvoker(delegate {
+                    DG_words.Sort(DG_words.Columns[1], ListSortDirection.Descending);
+                }));
             }
-            progressBar2.Hide();
+            //finally sort
+            DG_words.Invoke(new MethodInvoker(delegate {
+                DG_words.Sort(DG_words.Columns[1], ListSortDirection.Descending);
+            }));
         }
 
         //get all authors and populate DG_words with all authors, in order to fill it with values
@@ -604,7 +550,9 @@ namespace Forms_Wurds
                 if(author == "System")
                 temporary_author_col.Visible = false;
 
-                DG_words.Columns.Add(temporary_author_col);
+                DG_words.Invoke(new MethodInvoker(delegate {
+                    DG_words.Columns.Add(temporary_author_col);
+                }));
             }
         }
 
@@ -719,7 +667,7 @@ namespace Forms_Wurds
             }
         }
         */
-
+        
         private void DG_whole_chat_SelectionChanged(object sender, EventArgs e)
         {
             this.DG_whole_chat.ClearSelection();
@@ -786,16 +734,120 @@ namespace Forms_Wurds
         //This function reads the selected line to get LineID of the selected word
         //LineID will be used to filter a DataGridView showing all Messages containing
         //this word or LineID
-        private void DG_words_SelectionChanged(object sender, EventArgs e)
+        public void Update_DG_whole_chat_filteredByWord()
         {
-            //selected word
-            string word = "";
             try
             {
-                word = DG_words.SelectedRows[0].Cells[0].Value.ToString();
+                //assign word
+                string word = DG_words.SelectedRows[0].Cells[0].Value.ToString();
+                //clear all rows
+                DG_whole_chat_filteredByWord.Invoke(new MethodInvoker(delegate {
+                    DG_whole_chat_filteredByWord.Rows.Clear();
+                }));
+                //get all LineIDs
+                List<int> lineKEYs = new List<int>(Wurds[word].get_lineKEY());
+                foreach (int i in lineKEYs)
+                {
+                    DG_whole_chat_filteredByWord.Invoke(new MethodInvoker(delegate {
+                        DataGridViewRow row = DG_whole_chat_filteredByWord.Rows[DG_whole_chat_filteredByWord.Rows.Add()];
+                        row.Cells[0].Value = lines[i].getDateTime();
+                        row.Cells[1].Value = lines[i].getAuthor();
+                        row.Cells[2].Value = lines[i].getLiteral();
+                        row.Cells[3].Value = i;
+                    }));
+                }
+                DG_whole_chat_filteredByWord.ClearSelection();
+            }
+
+            catch { }
+        }
+
+
+        private void DG_words_SelectionChanged(object sender, EventArgs e)
+        {
+            Task.Factory.StartNew(Update_DG_whole_chat_filteredByWord, TaskCreationOptions.LongRunning);
+        }
+
+        //Uses the selected header to perform a reorder
+        private void DG_whole_chat_Reorder(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            int i = e.ColumnIndex;
+            if(i==0)
+            DG_whole_chat.DataSource = sortablelines[0].OrderBy(x => x.getDateTime()).ToList();
+
+            if (i == 1)
+            DG_whole_chat.DataSource = sortablelines[0].OrderBy(x => x.getAuthor()).ToList();
+
+            if (i == 2)
+            DG_whole_chat.DataSource = sortablelines[0].OrderBy(x => x.getLiteral()).ToList();
+        }
+
+        //Uses the selected header to perform a reorder, but descending!
+        private void DG_whole_chat_ReorderDescending(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            int i = e.ColumnIndex;
+            if (i == 0)
+            DG_whole_chat.DataSource = sortablelines[0].OrderByDescending(x => x.getDateTime()).ToList();
+
+            if (i == 1)
+            DG_whole_chat.DataSource = sortablelines[0].OrderByDescending(x => x.getAuthor()).ToList();
+
+            if (i == 2)
+            DG_whole_chat.DataSource = sortablelines[0].OrderByDescending(x => x.getLiteral()).ToList();
+        }
+
+        public void fill_Chart_Words(Dictionary<string, int> Total_Occurrence_per_Author, int Total_Word_Count)
+        {
+            //Chart_Words.Series.Add("Series");
+            foreach (string author in Total_Occurrence_per_Author.Keys)
+            {
+                double percent = Math.Round(100 * Convert.ToSingle(Total_Occurrence_per_Author[author] / Convert.ToSingle(Total_Word_Count)), 2);
+                DataPoint Temp_DataPoint = new DataPoint();
+                Temp_DataPoint.AxisLabel = author + "\n"+percent.ToString() + "%";
+                Temp_DataPoint.YValues = new double[] { Total_Occurrence_per_Author[author] };
+                Chart_Words.Series["Series1"].Points.Add(Temp_DataPoint);
+            }
+
+            /*
+            DataPoint dp2 = new DataPoint();
+            dp2.AxisLabel = "Test2";
+            dp2.YValues = new double[] { 55 };
+
+            Chart_Words.Series.Add("SeriesTest");
+            Chart_Words.Series["SeriesTest"].ChartType = SeriesChartType.Pie;
+            Chart_Words.Series["SeriesTest"].Points.Add(dp1);
+            Chart_Words.Series["SeriesTest"].Points.Add(dp2);
+            //Chart_Words.Series["SeriesTest"].Points.AddY(50);
+            Chart_Words.Series["SeriesTest"].ChartArea = "ChartArea1";
+            */
+        }
+
+        //This is executed when the form is done loading
+        private void Form_done_loading(object sender, EventArgs e)
+        {
+            //MessageBox.Show("form done loading");
+            set_allAuthors();
+
+            //Chop it apart and fill it into Word
+            Dissect_Chat();
+
+            //Loops through words to fill various variables
+            Analysis(Wurds);
+
+            Fill_DG_whole_chat();
+
+            Task.Factory.StartNew(() => fill_author_columns_of_DG_words(Wurds), TaskCreationOptions.LongRunning);
+        }
+
+        private void DG_whole_chat_filteredByWord_SelectionChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                int i = Convert.ToInt32(DG_whole_chat_filteredByWord.SelectedRows[0].Cells[3].Value);
+                DG_whole_chat.FirstDisplayedScrollingRowIndex = i;
+                //DG_whole_chat.Rows[i].Selected = true;
             }
             catch { }
-            //DG_whole_chat_filteredByWord.Sort
         }
     }
 }
