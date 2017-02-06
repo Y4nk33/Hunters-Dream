@@ -26,49 +26,24 @@ namespace Forms_Wurds
         //Used in DG_whole_chat
         SortableBindingList<Line[]> sortablelines = new SortableBindingList<Line[]>();
         //Name der zu lesenden Datei
-        static string path = Txt_Lesen("_chat");
+        static string path = Txt_Lesen("mary");
         //Ab Wann der Name beginnt
         static int index_name_start = 22;
         //Length of DateTime
         static int datetime_length = 20;
         //all lines
         static string[] lines_literal = File.ReadAllLines(path);
-        //sum of all words
-        //static int words_count = 0;
-
         //NEW, all words
         static Dictionary<string, Word> Wurds = new Dictionary<string, Word>();
-        
-        //authors and their sum of words
-        Dictionary<string, int> authors_sum_of_words = new Dictionary<string, int>();
-        //authors and their sum of messages
-        Dictionary<string, int> authors_sum_of_messages = new Dictionary<string, int>();
-        //authors and their sum of words in a message
-        Dictionary<string, int> authors_words_per_message = new Dictionary<string, int>();
-
         //all lines
         Line[] lines = new Line[File.ReadAllLines(path).Count()];
-
         //all authors
         static Collection<string> authors = new Collection<string>();
-
-        //this array of objects holds every property of words
 
         public Form1()
         {
             InitializeComponent();
         }
-  
-        //Ermittelt die Länge des Namens des Verfassers einer Zeile
-        /*
-        public static int get_Name_length(string line)
-        {
-            int i;
-            for (i = index_name_start; line[i] != ':'; i++);
-
-            return i - index_name_start;
-        }
-        */
 
         //Get Author of a line
         public static string get_Author(string line, string previous_author)
